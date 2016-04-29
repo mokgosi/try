@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="try" default="build">
+  <property name="basedir" value="." />
+  <resolvepath propertyName="basedirabsolute" file="${basedir}"/>
+  <property name="workspace" value="${basedir}/app/build" />
+  <property name="sourcedir" value="src" />
+  <property name="builddir" value="${basedir}/var/build" />
+  <property name="phpbin" value="php ${basedir}/vendor/bin" />
+
+  <target name="build"
+  depends="prepare,vendors,parameters,phploc,pdepend,phpcpd,phpmd-ci,phpcs-ci,phpunit,phpcb"/>
+
+  <target name="clean" description="Cleanup build artifacts">
+    <delete dir="${builddir}/api"/>
+    <delete dir="${builddir}/code-browser"/>
+    <delete dir="${builddir}/coverage"/>
+    <delete dir="${builddir}/logs"/>
+    <delete dir="${builddir}/pdepend"/>
+    <delete dir="${builddir}/docs/*"/>
+  </target>
+
+  <target name="prepare" depends="clean" description="Prepare for build">
+    <mkdir dir="${builddir}/api"/>
+    <mkdir dir="${builddir}/code-browser"/>
+    <mkdir dir="${builddir}/coverage"/>
+    <mkdir dir="${builddir}/logs"/>
+    <mkdir dir="${builddir}/pdepend"/>
+  </target>
+
+  <target name="phploc" description="Measure project size using PHPLOC">
+      <exec command="${phpbin}/phploc --log-csv ${builddir}/logs/phploc.csv ${sourcedir}" outputProperty="info" />
+      <echo>${info}</echo>
+  </target>
+
+  <target name="pdepend" description="Calculate software metrics using PHP_Depend">
+      <exec command="${phpbin}/pdepend --jdepend-xml=${builddir}/logs/jdepend.xml --jdepend-chart=${builddir}/pdepend/dependencies.svg --overview-pyramid=${builddir}/pdepend/overview-pyramid.svg ${sourcedir}" outputProperty="info" />
+      <echo>${info}</echo>
+  </target>
+
+  <target name="phpmd-ci" description="Perform project mess detection using PHPMD creating a log file for the continuous integration server">
+      <property name="cmd" value="${phpbin}/phpmd ${sourcedir} xml ${basedir}/phpmd.xml --reportfile ${builddir}/logs/pmd.xml" />
+      <echo>${cmd}</echo>
+      <exec command="${cmd}" outputProperty="info" />
+      <echo>${info}</echo>
+  </target>
+
+  <target name="phpcs-ci" description="Find coding standard violations using PHP_CodeSniffer creating a log file for the continuous integration server">
+      <property name="cmd" value="${phpbin}/phpcs --config-set installed_paths ${basedirabsolute}/vendor/escapestudios/symfony2-coding-standard" />
+      <echo>${cmd}</echo>
+      <exec command="${cmd}" outputProperty="info" />
+      <echo>${info}</echo>
+      <exec command="${phpbin}/phpcs --standard=Symfony2 --report=checkstyle --report-file=${builddir}/logs/checkstyle.xml --standard=Symfony2 ${sourcedir}" outputProperty="info" />
+      <echo>${info}</echo>
+  </target>
+
+  <target name="phpcpd" description="Find duplicate code using PHPCPD">
+      <exec command="${phpbin}/phpcpd --log-pmd ${builddir}/logs/pmd-cpd.xml ${sourcedir}" outputProperty="info" />
+      <echo>${info}</echo>
+  </target>
+
+  <target name="phpunit" description="Run unit tests with PHPUnit">
+      <exec command="${phpbin}/phpunit -c ${basedir}" outputProperty="info" />
+      <echo>${info}</echo>
+  </target>
+
+  <target name="phpcb" description="Aggregate tool output with PHP_CodeBrowser">
+    <exec command="${phpbin}/phpcb --log ${builddir}/logs --source ${sourcedir} --output ${builddir}/code-browser" outputProperty="info" />
+    <echo>${info}</echo>
+  </target>
+
+  <target name="vendors" description="Update vendors">
+    <exec command="wget https://getcomposer.org/composer.phar" outputProperty="info" />
+    <echo>${info}</echo>
+    <exec command="mv composer.phar bin/" outputProperty="info" />
+    <echo>${info}</echo>
+    <exec command="chmod a+x bin/composer.phar" outputProperty="info" />
+    <echo>${info}</echo>
+    <exec command="php bin/composer.phar update" outputProperty="info" />
+    <echo>${info}</echo>
+  </target>
+
+  <target name="parameters" description="Copy parameters">
+    <exec command="cp app/config/parameters.yml.dist app/config/parameters.yml" outputProperty="info" />
+    <echo>${info}</echo>
+  </target>
+
+</project>
